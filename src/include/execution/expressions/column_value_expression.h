@@ -45,6 +45,10 @@ class ColumnValueExpression : public AbstractExpression {
     BUSTUB_ASSERT(false, "Aggregation should only refer to group-by and aggregates.");
   }
 
+  int isaggre () const{
+      return 2;
+  }
+
  private:
   /** Tuple index 0 = left side of join, tuple index 1 = right side of join */
   uint32_t tuple_idx_;

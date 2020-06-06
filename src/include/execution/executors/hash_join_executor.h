@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <queue>
 
 #include "common/util/hash_util.h"
 #include "container/hash/hash_function.h"
@@ -96,16 +97,60 @@ class HashJoinExecutor : public AbstractExecutor {
    * @param right the right child, used by convention to probe the hash table
    */
   HashJoinExecutor(ExecutorContext *exec_ctx, const HashJoinPlanNode *plan, std::unique_ptr<AbstractExecutor> &&left,
-                   std::unique_ptr<AbstractExecutor> &&right);
+                   std::unique_ptr<AbstractExecutor> &&right)
+      : AbstractExecutor(exec_ctx) {
+        plan_ = plan;
+        // SimpleCatalog* catalog_ = exec_ctx_->GetCatalog();
+        // metadata_ = catalog_->GetTable(table_oid_);
+        // tableheap_ = metadata_->table_.get();
+        predicate_ = plan_->Predicate();
+        left_plan_ = plan->GetLeftPlan();
+        right_plan_ = plan_->GetRightPlan();
+        left_executor_ = std::move(left);
+        right_executor_ = std::move(right);
+      }
 
   /** @return the JHT in use. Do not modify this function, otherwise you will get a zero. */
   // Uncomment me! const HT *GetJHT() const { return &jht_; }
 
   const Schema *GetOutputSchema() override { return plan_->OutputSchema(); }
 
-  void Init() override;
 
-  bool Next(Tuple *tuple) override;
+  void Init() override {
+      jhtable_ = new HT ("jht", exec_ctx_->GetBufferPoolManager() , jht_comp_, jht_num_buckets_, jht_hash_fn_);
+      left_executor_->Init();
+      Tuple t;
+      while (left_executor_->Next(&t)) {
+          jhtable_->Insert(exec_ctx_->GetTransaction(), HashValues(&t, left_plan_->OutputSchema(), plan_->GetLeftKeys()), t);
+      }
+      right_executor_->Init();
+  }
+
+  // probe the right child
+  //notify : the left child may match a lot for one right child
+  bool Next(Tuple *tuple) override {
+    if (leave.size() > 0) {
+        *tuple = leave.front();
+        leave.pop();
+        return true;
+    }
+    Tuple t;
+    if (right_executor_->Next(&t) == false)
+        return false;
+    hash_t num_bucket_ = HashValues(&t, right_plan_->OutputSchema(), plan_->GetRightKeys());
+    //how to define the size of vector
+    std::vector<Tuple> set{1000};
+    jhtable_->GetValue(exec_ctx_->GetTransaction(), num_bucket_, &set);
+    for (auto i : set) {
+        if (predicate_ == nullptr || predicate_->EvaluateJoin(&t, right_plan_->OutputSchema(), &i, left_plan_->OutputSchema()).GetAs<bool> ())
+            leave.push(t);
+    }
+    if (leave.size() == 0)
+        return false;
+    *tuple = leave.front();
+    leave.pop();
+    return true;
+  }
 
   /**
    * Hashes a tuple by evaluating it against every expression on the given schema, combining all non-null hashes.
@@ -131,7 +176,7 @@ class HashJoinExecutor : public AbstractExecutor {
 
  private:
   /** The hash join plan node. */
-  const HashJoinPlanNode *plan_;
+  const HashJoinPlanNode* plan_;
   /** The comparator is used to compare hashes. */
   [[maybe_unused]] HashComparator jht_comp_{};
   /** The identity hash function. */
@@ -141,5 +186,16 @@ class HashJoinExecutor : public AbstractExecutor {
   // Uncomment me! HT jht_;
   /** The number of buckets in the hash table. */
   static constexpr uint32_t jht_num_buckets_ = 2;
+
+  //add by myself
+  const AbstractPlanNode * left_plan_;
+  const AbstractPlanNode * right_plan_;
+  const AbstractExpression *predicate_;
+  std::unique_ptr<AbstractExecutor> right_executor_;
+  std::unique_ptr<AbstractExecutor> left_executor_;
+  std::queue<Tuple> leave;
+
+  HT* jhtable_;
 };
-}  // namespace bustub
+}
+// namespace bustub

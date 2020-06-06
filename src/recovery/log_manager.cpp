@@ -14,18 +14,16 @@
 
 namespace bustub {
 /*
- * set enable_logging = true
+ * set ENABLE_LOGGING = true
  * Start a separate thread to execute flush to disk operation periodically
- * The flush can be triggered when timeout or the log buffer is full or buffer
- * pool manager wants to force flush (it only happens when the flushed page has
- * a larger LSN than persistent LSN)
- *
- * This thread runs forever until system shutdown/StopFlushThread
+ * The flush can be triggered when the log buffer is full or buffer pool
+ * manager wants to force flush (it only happens when the flushed page has a
+ * larger LSN than persistent LSN)
  */
 void LogManager::RunFlushThread() {}
 
 /*
- * Stop and join the flush thread, set enable_logging = false
+ * Stop and join the flush thread, set ENABLE_LOGGING = false
  */
 void LogManager::StopFlushThread() {}
 

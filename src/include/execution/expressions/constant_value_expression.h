@@ -35,6 +35,9 @@ class ConstantValueExpression : public AbstractExpression {
   Value EvaluateAggregate(const std::vector<Value> &group_bys, const std::vector<Value> &aggregates) const override {
     return val_;
   }
+  int isaggre () const{
+      return 4;
+  }
 
  private:
   Value val_;

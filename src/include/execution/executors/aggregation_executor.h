@@ -103,6 +103,10 @@ class SimpleAggregationHashTable {
     CombineAggregateValues(&ht[agg_key], agg_val);
   }
 
+
+   int Size() {
+       return ht.size();
+   }
   /**
    * An iterator through the simplified aggregation hash table.
    */
@@ -161,16 +165,58 @@ class AggregationExecutor : public AbstractExecutor {
    * @param child the child executor
    */
   AggregationExecutor(ExecutorContext *exec_ctx, const AggregationPlanNode *plan,
-                      std::unique_ptr<AbstractExecutor> &&child);
+                      std::unique_ptr<AbstractExecutor> &&child)
+      : AbstractExecutor(exec_ctx) {
+        plan_ = plan;
+        child_ = std::move(child);
+      }
 
   /** Do not use or remove this function, otherwise you will get zero points. */
-  const AbstractExecutor *GetChildExecutor() const;
+  const AbstractExecutor *GetChildExecutor() const { return child_.get(); }
 
-  const Schema *GetOutputSchema() override;
+  const Schema *GetOutputSchema() override { return plan_->OutputSchema(); }
 
-  void Init() override;
+  void Init() override {
+    child_->Init();
+    //we should build a  hashtable to combine all values by groups
+    //notify:  if the first args is plan_->groupby(), it will get error
+    //aht_ = new SimpleAggregationHashTable(plan_->GetAggregates(), plan_->GetAggregateTypes());
+    aht_ = new SimpleAggregationHashTable(plan_->GetAggregates(), plan_->GetAggregateTypes());
+    Tuple t;
+    int cnt = 0;
+    while (child_->Next(&t)) {
+        AggregateKey key_ = MakeKey(&t);
+        AggregateValue value_ = MakeVal(&t);
+        aht_->InsertCombine(key_, value_);
+        cnt++;
+    }
+    having_ = plan_->GetHaving();
+    begin_ = new SimpleAggregationHashTable::Iterator(aht_->Begin());
+    end_ = new SimpleAggregationHashTable::Iterator(aht_->End());
+  }
 
-  bool Next(Tuple *tuple) override;
+  bool Next(Tuple *tuple) override { 
+    //using having to choose the next tuple, similar to seq scan
+    if (*begin_ == *end_)
+        return false;
+    //notify : the schema_column of output is not equal to group-by or aggregates
+    uint32_t num_column_ = GetOutputSchema()->GetColumnCount();
+    std::vector<Value> tmp{num_column_};
+    for (uint32_t i = 0; i < num_column_; ++i) {
+        auto exp_= GetOutputSchema()->GetColumn(i).GetExpr();
+        tmp[i] = exp_->EvaluateAggregate((*begin_).Key().group_bys_, (*begin_).Val().aggregates_);
+    }
+    *tuple = Tuple(tmp, GetOutputSchema());
+    // why having use the tuple is wrong?  fix me!
+    //if (having_ == nullptr || having_->Evaluate(tuple, GetOutputSchema()).GetAs<bool>()){
+    if (having_ == nullptr || having_->EvaluateAggregate((*begin_).Key().group_bys_, 
+        (*begin_).Val().aggregates_).GetAs<bool>()){
+        ++(*begin_);
+        return true;
+    }
+    ++(*begin_);
+    return Next(tuple); 
+  }
 
   /** @return the tuple as an AggregateKey */
   AggregateKey MakeKey(const Tuple *tuple) {
@@ -199,5 +245,14 @@ class AggregationExecutor : public AbstractExecutor {
   // Uncomment me! SimpleAggregationHashTable aht_;
   /** Simple aggregation hash table iterator. */
   // Uncomment me! SimpleAggregationHashTable::Iterator aht_iterator_;
+
+  //add by self
+  SimpleAggregationHashTable* aht_;
+  const AbstractExpression * having_;
+  SimpleAggregationHashTable::Iterator* begin_;
+  SimpleAggregationHashTable::Iterator* end_;
+  
+ 
+
 };
 }  // namespace bustub

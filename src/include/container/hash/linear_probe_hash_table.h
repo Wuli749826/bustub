@@ -92,11 +92,16 @@ class LinearProbeHashTable : public HashTable<KeyType, ValueType, KeyComparator>
   BufferPoolManager *buffer_pool_manager_;
   KeyComparator comparator_;
 
+  HashTableHeaderPage* head_page;
+  HashTableBlockPage<KeyType, ValueType, KeyComparator>* block_page;
+  size_t num_; // record the number of mappingtypes in one block page
+  size_t table_size_;
   // Readers includes inserts and removes, writer is only resize
   ReaderWriterLatch table_latch_;
 
   // Hash function
   HashFunction<KeyType> hash_fn_;
+
 };
 
 }  // namespace bustub

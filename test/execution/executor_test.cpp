@@ -123,7 +123,6 @@ class ExecutorTest : public ::testing::Test {
 
 // NOLINTNEXTLINE
 TEST_F(ExecutorTest, DISABLED_SimpleSeqScanTest) {
-  // SELECT colA, colB FROM test_1 WHERE colA < 500
   TableMetadata *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
   Schema &schema = table_info->schema_;
   auto *colA = MakeColumnValueExpression(schema, 0, "colA");
@@ -131,13 +130,13 @@ TEST_F(ExecutorTest, DISABLED_SimpleSeqScanTest) {
   auto *const500 = MakeConstantValueExpression(ValueFactory::GetIntegerValue(500));
   auto *predicate = MakeComparisonExpression(colA, const500, ComparisonType::LessThan);
   auto *out_schema = MakeOutputSchema({{"colA", colA}, {"colB", colB}});
-
   SeqScanPlanNode plan{out_schema, predicate, table_info->oid_};
   auto executor = ExecutorFactory::CreateExecutor(GetExecutorContext(), &plan);
+
+
   executor->Init();
   Tuple tuple;
   uint32_t num_tuples = 0;
-  std::cout << "ColA, ColB" << std::endl;
   while (executor->Next(&tuple)) {
     ASSERT_TRUE(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>() < 500);
     ASSERT_TRUE(tuple.GetValue(out_schema, out_schema->GetColIdx("colB")).GetAs<int32_t>() < 10);
@@ -162,7 +161,6 @@ TEST_F(ExecutorTest, DISABLED_SimpleRawInsertTest) {
   auto insert_executor = ExecutorFactory::CreateExecutor(GetExecutorContext(), &insert_plan);
   insert_executor->Init();
   ASSERT_TRUE(insert_executor->Next(nullptr));
-
   // Iterate through table make sure that values were inserted.
   // SELECT * FROM empty_table2;
   auto &schema = table_info->schema_;
@@ -170,10 +168,12 @@ TEST_F(ExecutorTest, DISABLED_SimpleRawInsertTest) {
   auto colB = MakeColumnValueExpression(schema, 0, "colB");
   auto out_schema = MakeOutputSchema({{"colA", colA}, {"colB", colB}});
   SeqScanPlanNode scan_plan{out_schema, nullptr, table_info->oid_};
+
   auto scan_executor = ExecutorFactory::CreateExecutor(GetExecutorContext(), &scan_plan);
   scan_executor->Init();
   Tuple tuple;
   std::cout << "ColA, ColB" << std::endl;
+
   // First value
   ASSERT_TRUE(scan_executor->Next(&tuple));
   ASSERT_EQ(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>(), 100);
@@ -202,6 +202,7 @@ TEST_F(ExecutorTest, DISABLED_SimpleSelectInsertTest) {
   std::unique_ptr<AbstractPlanNode> scan_plan1;
   const Schema *out_schema1;
   {
+    
     auto table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
     auto &schema = table_info->schema_;
     auto colA = MakeColumnValueExpression(schema, 0, "colA");
@@ -311,7 +312,7 @@ TEST_F(ExecutorTest, DISABLED_SimpleHashJoinTest) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(ExecutorTest, DISABLED_SimpleAggregationTest) {
+TEST_F(ExecutorTest, SimpleAggregationTest) {
   // SELECT COUNT(colA), SUM(colA), min(colA), max(colA) from test_1;
   std::unique_ptr<AbstractPlanNode> scan_plan;
   const Schema *scan_schema;

@@ -52,6 +52,9 @@ class ComparisonExpression : public AbstractExpression {
     Value rhs = GetChildAt(1)->EvaluateAggregate(group_bys, aggregates);
     return ValueFactory::GetBooleanValue(PerformComparison(lhs, rhs));
   }
+  int isaggre () const{
+      return 3;
+  }
 
  private:
   CmpBool PerformComparison(const Value &lhs, const Value &rhs) const {

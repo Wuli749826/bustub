@@ -66,7 +66,8 @@ class AbstractExpression {
 
   /** @return the type of this expression if it were to be evaluated */
   virtual TypeId GetReturnType() const { return ret_type_; }
-
+  
+  virtual int isaggre() const = 0;
  private:
   /** The children of this expression. Note that the order of appearance of children may matter. */
   std::vector<const AbstractExpression *> children_;
