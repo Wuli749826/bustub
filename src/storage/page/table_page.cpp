@@ -24,6 +24,7 @@ void TablePage::Init(page_id_t page_id, uint32_t page_size, page_id_t prev_page_
   if (enable_logging) {
     LogRecord log_record = LogRecord(txn->GetTransactionId(), txn->GetPrevLSN(), LogRecordType::NEWPAGE, prev_page_id);
     lsn_t lsn = log_manager->AppendLogRecord(&log_record);
+    //this is setting the first lsn of this page, not the log_record
     SetLSN(lsn);
     txn->SetPrevLSN(lsn);
   }

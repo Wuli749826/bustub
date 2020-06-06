@@ -161,16 +161,17 @@ class AggregationExecutor : public AbstractExecutor {
    * @param child the child executor
    */
   AggregationExecutor(ExecutorContext *exec_ctx, const AggregationPlanNode *plan,
-                      std::unique_ptr<AbstractExecutor> &&child);
+                      std::unique_ptr<AbstractExecutor> &&child)
+      : AbstractExecutor(exec_ctx) {}
 
   /** Do not use or remove this function, otherwise you will get zero points. */
-  const AbstractExecutor *GetChildExecutor() const;
+  const AbstractExecutor *GetChildExecutor() const { return child_.get(); }
 
-  const Schema *GetOutputSchema() override;
+  const Schema *GetOutputSchema() override { return plan_->OutputSchema(); }
 
-  void Init() override;
+  void Init() override {}
 
-  bool Next(Tuple *tuple) override;
+  bool Next(Tuple *tuple) override { return false; }
 
   /** @return the tuple as an AggregateKey */
   AggregateKey MakeKey(const Tuple *tuple) {

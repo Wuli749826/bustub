@@ -43,7 +43,7 @@ class LogManager {
 
   void RunFlushThread();
   void StopFlushThread();
-
+  void Flush(); //add by gsy
   lsn_t AppendLogRecord(LogRecord *log_record);
 
   inline lsn_t GetNextLSN() { return next_lsn_; }
@@ -53,7 +53,6 @@ class LogManager {
 
  private:
   // TODO(students): you may add your own member variables
-
   /** The atomic counter which records the next log sequence number. */
   std::atomic<lsn_t> next_lsn_;
   /** The log records before and including the persistent lsn have been written to disk. */
@@ -69,6 +68,14 @@ class LogManager {
   std::condition_variable cv_;
 
   DiskManager *disk_manager_ __attribute__((__unused__));
+  //add by gsy
+  int32_t offset_ = 0;
+  bool full_ = false;
+  
+  std::mutex flush_buffer_latch_; //protect flush buffer, avoid switch
+  std::mutex log_buffer_latch_; //protect log buffer, avoid multi-write
+  
+
 };
 
 }  // namespace bustub

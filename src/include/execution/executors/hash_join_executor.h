@@ -96,16 +96,17 @@ class HashJoinExecutor : public AbstractExecutor {
    * @param right the right child, used by convention to probe the hash table
    */
   HashJoinExecutor(ExecutorContext *exec_ctx, const HashJoinPlanNode *plan, std::unique_ptr<AbstractExecutor> &&left,
-                   std::unique_ptr<AbstractExecutor> &&right);
+                   std::unique_ptr<AbstractExecutor> &&right)
+      : AbstractExecutor(exec_ctx) {}
 
   /** @return the JHT in use. Do not modify this function, otherwise you will get a zero. */
   // Uncomment me! const HT *GetJHT() const { return &jht_; }
 
   const Schema *GetOutputSchema() override { return plan_->OutputSchema(); }
 
-  void Init() override;
+  void Init() override {}
 
-  bool Next(Tuple *tuple) override;
+  bool Next(Tuple *tuple) override { return false; }
 
   /**
    * Hashes a tuple by evaluating it against every expression on the given schema, combining all non-null hashes.

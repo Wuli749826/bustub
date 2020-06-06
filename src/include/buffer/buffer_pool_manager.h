@@ -97,7 +97,11 @@ class BufferPoolManager {
   /** @return size of the buffer pool */
   size_t GetPoolSize() { return pool_size_; }
 
- protected:
+ private:
+    //  personal function 1
+    bool SelectFrameImpl(frame_id_t& frame_id);
+
+
   /**
    * Grading function. Do not modify!
    * Invokes the callback function if it is not null.

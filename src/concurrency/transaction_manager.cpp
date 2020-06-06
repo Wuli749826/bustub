@@ -31,15 +31,16 @@ Transaction *TransactionManager::Begin(Transaction *txn) {
 
   if (enable_logging) {
     // TODO(student): Add logging here.
+    LogRecord log_record(txn->GetTransactionId(), INVALID_LSN, LogRecordType::BEGIN);
+    lsn_t lsn = log_manager_->AppendLogRecord(&log_record);
+    txn->SetPrevLSN(INVALID_LSN);
   }
-
   txn_map[txn->GetTransactionId()] = txn;
   return txn;
 }
 
 void TransactionManager::Commit(Transaction *txn) {
   txn->SetState(TransactionState::COMMITTED);
-
   // Perform all deletes before we commit.
   auto write_set = txn->GetWriteSet();
   while (!write_set->empty()) {
@@ -55,8 +56,12 @@ void TransactionManager::Commit(Transaction *txn) {
 
   if (enable_logging) {
     // TODO(student): add logging here
+    LogRecord log_record(txn->GetTransactionId(), txn->GetPrevLSN(), LogRecordType::COMMIT);
+    lsn_t lsn = log_manager_->AppendLogRecord(&log_record);
+    txn->SetPrevLSN(lsn);
   }
-
+  //Within TransactionManager, whenever you call the Commit or Abort method, 
+  //you need to make sure your log records are permanently stored on disk file before releasing the locks. 
   // Release all the locks.
   ReleaseLocks(txn);
   // Release the global transaction latch.
@@ -85,6 +90,9 @@ void TransactionManager::Abort(Transaction *txn) {
 
   if (enable_logging) {
     // TODO(student): add logging here
+    LogRecord log_record(txn->GetTransactionId(), txn->GetPrevLSN(), LogRecordType::ABORT);
+    lsn_t lsn = log_manager_->AppendLogRecord(&log_record);
+    txn->SetPrevLSN(lsn);
   }
 
   // Release all the locks.

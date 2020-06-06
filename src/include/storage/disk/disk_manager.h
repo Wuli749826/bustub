@@ -55,7 +55,7 @@ class DiskManager {
   void ReadPage(page_id_t page_id, char *page_data);
 
   /**
-   * Flush the entire log buffer into disk.
+   * Append a log entry to the log file.
    * @param log_data raw log data
    * @param size size of log entry
    */
